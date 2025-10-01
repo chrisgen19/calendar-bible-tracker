@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Book, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Book, Check, X, Plus } from 'lucide-react';
 
 export default function BibleCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -7,6 +7,10 @@ export default function BibleCalendar() {
   const [readingData, setReadingData] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [modalReading, setModalReading] = useState('');
+  const [bibleBook, setBibleBook] = useState('');
+  const [chapters, setChapters] = useState('');
+  const [verses, setVerses] = useState('');
+  const [dateRead, setDateRead] = useState('');
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -37,27 +41,69 @@ export default function BibleCalendar() {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
   };
 
+  const getPHDate = () => {
+    const now = new Date();
+    const phDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return phDate.toISOString().split('T')[0];
+  };
+
   const openModal = (day) => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     const dateKey = formatDateKey(date);
+    const existingData = readingData[dateKey] || {};
+
     setSelectedDate(date);
-    setModalReading(readingData[dateKey]?.reading || '');
+    setModalReading(existingData.reading || '');
+    setBibleBook(existingData.book || '');
+    setChapters(existingData.chapters || '');
+    setVerses(existingData.verses || '');
+    setDateRead(existingData.dateRead || date.toISOString().split('T')[0]);
+    setShowModal(true);
+  };
+
+  const openAddReadingModal = () => {
+    const phDate = getPHDate();
+    const date = new Date(phDate + 'T00:00:00');
+    const dateKey = formatDateKey(date);
+    const existingData = readingData[dateKey] || {};
+
+    setSelectedDate(date);
+    setModalReading(existingData.reading || '');
+    setBibleBook(existingData.book || '');
+    setChapters(existingData.chapters || '');
+    setVerses(existingData.verses || '');
+    setDateRead(phDate);
     setShowModal(true);
   };
 
   const saveReading = () => {
-    if (selectedDate) {
-      const dateKey = formatDateKey(selectedDate);
+    if (selectedDate && dateRead) {
+      const [year, month, day] = dateRead.split('-');
+      const readDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const dateKey = formatDateKey(readDate);
+
+      const readingText = bibleBook && chapters
+        ? `${bibleBook} ${chapters}${verses ? ':' + verses : ''}`
+        : modalReading;
+
       setReadingData({
         ...readingData,
         [dateKey]: {
-          reading: modalReading,
-          completed: modalReading.trim() !== ''
+          reading: readingText,
+          book: bibleBook,
+          chapters: chapters,
+          verses: verses,
+          dateRead: dateRead,
+          completed: readingText.trim() !== ''
         }
       });
     }
     setShowModal(false);
     setModalReading('');
+    setBibleBook('');
+    setChapters('');
+    setVerses('');
+    setDateRead('');
   };
 
   const toggleComplete = (day) => {
@@ -123,10 +169,6 @@ export default function BibleCalendar() {
     return days;
   };
 
-  const getTotalCompleted = () => {
-    return Object.values(readingData).filter(d => d.completed).length;
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-6xl mx-auto">
@@ -139,10 +181,13 @@ export default function BibleCalendar() {
               </h1>
               <p className="text-gray-600 mt-1">Track your daily scripture reading</p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600">Days Completed</p>
-              <p className="text-3xl font-bold text-indigo-600">{getTotalCompleted()}</p>
-            </div>
+            <button
+              onClick={openAddReadingModal}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
+            >
+              <Plus className="w-5 h-5" />
+              Add Reading
+            </button>
           </div>
 
           <div className="flex items-center justify-between mb-6">
@@ -222,17 +267,59 @@ export default function BibleCalendar() {
               </button>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                What did you read today?
-              </label>
-              <textarea
-                value={modalReading}
-                onChange={(e) => setModalReading(e.target.value)}
-                placeholder="e.g., Psalm 23, Matthew 5-7, Genesis 1-3"
-                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                rows="4"
-              />
+            <div className="space-y-4 mb-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Bible Book
+                </label>
+                <input
+                  type="text"
+                  value={bibleBook}
+                  onChange={(e) => setBibleBook(e.target.value)}
+                  placeholder="e.g., Genesis, Psalm, Matthew"
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Chapters
+                  </label>
+                  <input
+                    type="text"
+                    value={chapters}
+                    onChange={(e) => setChapters(e.target.value)}
+                    placeholder="e.g., 1-3, 5"
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Verses
+                  </label>
+                  <input
+                    type="text"
+                    value={verses}
+                    onChange={(e) => setVerses(e.target.value)}
+                    placeholder="e.g., 1-10"
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Date Read
+                </label>
+                <input
+                  type="date"
+                  value={dateRead}
+                  onChange={(e) => setDateRead(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
             </div>
 
             <div className="flex gap-3">
