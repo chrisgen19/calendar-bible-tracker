@@ -1,6 +1,6 @@
 # Bible Reading Calendar
 
-A beautiful React web application for tracking your daily Bible reading progress.
+A beautiful Next.js web application for tracking your daily Bible reading progress.
 
 ## Features
 
@@ -8,7 +8,7 @@ A beautiful React web application for tracking your daily Bible reading progress
 - ✅ Track completed reading days
 - 📖 Add notes about what you read each day
 - 🎨 Clean, modern UI with Tailwind CSS
-- 📊 View total days completed
+- 📊 Add readings with Bible Book, Chapters, Verses, and Date
 
 ## Setup Instructions
 
@@ -24,7 +24,7 @@ npm install
 npm run dev
 ```
 
-The app will open at `http://localhost:5173`
+The app will open at `http://localhost:3000`
 
 ### 3. Build for Production
 
@@ -32,26 +32,40 @@ The app will open at `http://localhost:5173`
 npm run build
 ```
 
-### 4. Preview Production Build
+### 4. Start Production Server
 
 ```bash
-npm run preview
+npm start
 ```
 
 ## How to Use
 
-1. Click any day on the calendar to add your Bible reading
-2. Enter what you read (e.g., "Psalm 23, Matthew 5-7")
-3. Click Save to mark the day as complete
-4. Completed days show in green with a checkmark
-5. Navigate between months using the arrow buttons
+1. Click "Add Reading" button or any day on the calendar to add your Bible reading
+2. Fill in the Bible Book, Chapters, Verses fields
+3. Select the Date Read (defaults to current PH date)
+4. Click Save to mark the day as complete
+5. Completed days show in green with a checkmark
+6. Navigate between months using the arrow buttons
 
 ## Technologies Used
 
+- Next.js 14
 - React 18
-- Vite
 - Tailwind CSS
 - Lucide React (icons)
+
+## Project Structure
+
+```
+calendar/
+├── app/
+│   ├── layout.jsx       # Root layout with metadata
+│   ├── page.jsx         # Main calendar page
+│   └── globals.css      # Global styles
+├── next.config.js       # Next.js configuration
+├── tailwind.config.js   # Tailwind CSS configuration
+└── package.json         # Dependencies and scripts
+```
 
 ## License
 

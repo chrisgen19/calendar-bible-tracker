@@ -57,7 +57,14 @@ export default function BibleCalendar() {
     setBibleBook(existingData.book || '');
     setChapters(existingData.chapters || '');
     setVerses(existingData.verses || '');
-    setDateRead(existingData.dateRead || date.toISOString().split('T')[0]);
+
+    // Format the date properly for the date input (YYYY-MM-DD)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${dayStr}`;
+
+    setDateRead(existingData.dateRead || formattedDate);
     setShowModal(true);
   };
 
