@@ -52,6 +52,26 @@ model User {
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
+  bibleReadings     BibleReading[]
+
   @@index([email])
   @@map("users")
+}
+
+model BibleReading {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bibleBook   String
+  chapters    String
+  verses      String?
+  dateRead    DateTime
+  completed   Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([dateRead])
+  @@map("bible_readings")
 }

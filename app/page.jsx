@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Book, Check, X, Plus, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Book, Check, X, Plus, LogOut, Trash2 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 
 export default function BibleCalendar() {
@@ -10,11 +10,12 @@ export default function BibleCalendar() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [readingData, setReadingData] = useState({});
   const [showModal, setShowModal] = useState(false);
-  const [modalReading, setModalReading] = useState('');
   const [bibleBook, setBibleBook] = useState('');
   const [chapters, setChapters] = useState('');
   const [verses, setVerses] = useState('');
   const [dateRead, setDateRead] = useState('');
+  const [currentReadingId, setCurrentReadingId] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -37,6 +38,43 @@ export default function BibleCalendar() {
     return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
   };
 
+  // Fetch readings when user or month changes
+  useEffect(() => {
+    if (user) {
+      fetchReadings();
+    }
+  }, [user, currentDate]);
+
+  const fetchReadings = async () => {
+    if (!user) return;
+
+    try {
+      const response = await fetch(
+        `/api/readings?userId=${user.id}&month=${currentDate.getMonth()}&year=${currentDate.getFullYear()}`
+      );
+      const data = await response.json();
+
+      const readingsMap = {};
+      data.forEach(reading => {
+        const date = new Date(reading.dateRead);
+        const key = formatDateKey(date);
+        readingsMap[key] = {
+          id: reading.id,
+          reading: `${reading.bibleBook} ${reading.chapters}${reading.verses ? ':' + reading.verses : ''}`,
+          book: reading.bibleBook,
+          chapters: reading.chapters,
+          verses: reading.verses,
+          dateRead: reading.dateRead,
+          completed: reading.completed
+        };
+      });
+
+      setReadingData(readingsMap);
+    } catch (error) {
+      console.error('Error fetching readings:', error);
+    }
+  };
+
   const previousMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
   };
@@ -57,10 +95,11 @@ export default function BibleCalendar() {
     const existingData = readingData[dateKey] || {};
 
     setSelectedDate(date);
-    setModalReading(existingData.reading || '');
     setBibleBook(existingData.book || '');
     setChapters(existingData.chapters || '');
     setVerses(existingData.verses || '');
+    setCurrentReadingId(existingData.id || null);
+    setIsEditMode(!!existingData.id);
 
     // Format the date properly for the date input (YYYY-MM-DD)
     const year = date.getFullYear();
@@ -68,67 +107,106 @@ export default function BibleCalendar() {
     const dayStr = String(day).padStart(2, '0');
     const formattedDate = `${year}-${month}-${dayStr}`;
 
-    setDateRead(existingData.dateRead || formattedDate);
+    setDateRead(formattedDate);
     setShowModal(true);
   };
 
   const openAddReadingModal = () => {
     const phDate = getPHDate();
-    const date = new Date(phDate + 'T00:00:00');
-    const dateKey = formatDateKey(date);
-    const existingData = readingData[dateKey] || {};
-
-    setSelectedDate(date);
-    setModalReading(existingData.reading || '');
-    setBibleBook(existingData.book || '');
-    setChapters(existingData.chapters || '');
-    setVerses(existingData.verses || '');
-    setDateRead(phDate);
-    setShowModal(true);
-  };
-
-  const saveReading = () => {
-    if (selectedDate && dateRead) {
-      const [year, month, day] = dateRead.split('-');
-      const readDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      const dateKey = formatDateKey(readDate);
-
-      const readingText = bibleBook && chapters
-        ? `${bibleBook} ${chapters}${verses ? ':' + verses : ''}`
-        : modalReading;
-
-      setReadingData({
-        ...readingData,
-        [dateKey]: {
-          reading: readingText,
-          book: bibleBook,
-          chapters: chapters,
-          verses: verses,
-          dateRead: dateRead,
-          completed: readingText.trim() !== ''
-        }
-      });
-    }
-    setShowModal(false);
-    setModalReading('');
+    setSelectedDate(new Date(phDate + 'T00:00:00'));
     setBibleBook('');
     setChapters('');
     setVerses('');
-    setDateRead('');
+    setDateRead(phDate);
+    setCurrentReadingId(null);
+    setIsEditMode(false);
+    setShowModal(true);
   };
 
-  const toggleComplete = (day) => {
-    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    const dateKey = formatDateKey(date);
-    const current = readingData[dateKey] || {};
+  const saveReading = async () => {
+    if (!user || !dateRead || !bibleBook || !chapters) {
+      alert('Please fill in all required fields');
+      return;
+    }
 
-    setReadingData({
-      ...readingData,
-      [dateKey]: {
-        reading: current.reading || '',
-        completed: !current.completed
+    try {
+      if (isEditMode && currentReadingId) {
+        // Update existing reading
+        const response = await fetch(`/api/readings/${currentReadingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bibleBook,
+            chapters,
+            verses,
+            dateRead,
+            completed: true
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to update reading');
+      } else {
+        // Create new reading
+        const response = await fetch('/api/readings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            bibleBook,
+            chapters,
+            verses,
+            dateRead,
+            completed: true
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to create reading');
       }
-    });
+
+      // Refresh readings
+      await fetchReadings();
+
+      // Close modal and reset
+      setShowModal(false);
+      setBibleBook('');
+      setChapters('');
+      setVerses('');
+      setDateRead('');
+      setCurrentReadingId(null);
+      setIsEditMode(false);
+    } catch (error) {
+      console.error('Error saving reading:', error);
+      alert('Failed to save reading');
+    }
+  };
+
+  const deleteReading = async () => {
+    if (!currentReadingId) return;
+
+    if (!confirm('Are you sure you want to delete this reading?')) return;
+
+    try {
+      const response = await fetch(`/api/readings/${currentReadingId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) throw new Error('Failed to delete reading');
+
+      // Refresh readings
+      await fetchReadings();
+
+      // Close modal and reset
+      setShowModal(false);
+      setBibleBook('');
+      setChapters('');
+      setVerses('');
+      setDateRead('');
+      setCurrentReadingId(null);
+      setIsEditMode(false);
+    } catch (error) {
+      console.error('Error deleting reading:', error);
+      alert('Failed to delete reading');
+    }
   };
 
   const renderCalendar = () => {
@@ -366,6 +444,15 @@ export default function BibleCalendar() {
             </div>
 
             <div className="flex gap-3">
+              {isEditMode && (
+                <button
+                  onClick={deleteReading}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              )}
               <button
                 onClick={() => setShowModal(false)}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-gray-700"
@@ -376,7 +463,7 @@ export default function BibleCalendar() {
                 onClick={saveReading}
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
               >
-                Save
+                {isEditMode ? 'Update' : 'Save'}
               </button>
             </div>
           </div>
