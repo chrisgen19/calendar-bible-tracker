@@ -33,3 +33,5 @@ yarn-error.log*
 # Debug
 lerna-debug.log*
 .pnpm-debug.log*
+
+/src/generated/prisma
