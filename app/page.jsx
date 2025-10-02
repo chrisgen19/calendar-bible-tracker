@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Book, Check, X, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Book, Check, X, Plus, LogOut } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
 
 export default function BibleCalendar() {
+  const { user, logout, loading } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [readingData, setReadingData] = useState({});
@@ -178,6 +180,21 @@ export default function BibleCalendar() {
     return days;
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will be redirected by AuthContext
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-6xl mx-auto">
@@ -188,15 +205,26 @@ export default function BibleCalendar() {
                 <Book className="w-8 h-8 text-indigo-600" />
                 Bible Reading Calendar
               </h1>
-              <p className="text-gray-600 mt-1">Track your daily scripture reading</p>
+              <p className="text-gray-600 mt-1">
+                Welcome, {user.firstName} {user.lastName} - Track your daily scripture reading
+              </p>
             </div>
-            <button
-              onClick={openAddReadingModal}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
-            >
-              <Plus className="w-5 h-5" />
-              Add Reading
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={openAddReadingModal}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
+              >
+                <Plus className="w-5 h-5" />
+                Add Reading
+              </button>
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-semibold"
+              >
+                <LogOut className="w-5 h-5" />
+                Logout
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between mb-6">

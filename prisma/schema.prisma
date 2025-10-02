@@ -13,3 +13,45 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+model User {
+  id                String     @id @default(uuid())
+  email             String     @unique
+  password          String
+  firstName         String
+  lastName          String
+  gender            Gender
+  phoneNumber       String?
+  dateOfBirth       DateTime?
+  country           String?
+  city              String?
+  address           String?
+  postalCode        String?
+  profilePicture    String?
+  emailVerified     Boolean    @default(false)
+  emailVerifiedAt   DateTime?
+  phoneVerified     Boolean    @default(false)
+  status            UserStatus @default(PENDING_VERIFICATION)
+  lastLoginAt       DateTime?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
