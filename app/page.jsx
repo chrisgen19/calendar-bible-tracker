@@ -230,24 +230,26 @@ export default function BibleCalendar() {
       days.push(
         <div
           key={day}
-          className={`aspect-square border rounded-lg p-2 cursor-pointer transition-all hover:shadow-md ${
+          className={`aspect-square border md:rounded-lg p-1 md:p-2 cursor-pointer transition-all hover:shadow-md ${
             isToday ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
           } ${dayData.completed ? 'bg-green-50' : ''}`}
           onClick={() => openModal(day)}
         >
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-start">
-              <span className={`text-sm font-semibold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+              <span className={`text-xs md:text-sm font-semibold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
                 {day}
               </span>
               {dayData.completed && (
-                <Check className="w-4 h-4 text-green-600" />
+                <Check className="w-3 h-3 md:w-4 md:h-4 text-green-600" />
               )}
             </div>
             {dayData.reading && (
-              <div className="mt-1 flex-1">
-                <Book className="w-3 h-3 text-gray-400 mb-1" />
-                <p className="text-xs text-gray-600 line-clamp-2">{dayData.reading}</p>
+              <div className="mt-0.5 md:mt-1 flex-1 overflow-hidden">
+                <Book className="w-2 h-2 md:w-3 md:h-3 text-gray-400 mb-0.5 md:mb-1 hidden md:block" />
+                <p className="text-[10px] md:text-xs text-gray-600 line-clamp-3 md:line-clamp-2 leading-tight">
+                  {dayData.reading}
+                </p>
               </div>
             )}
           </div>
@@ -323,15 +325,15 @@ export default function BibleCalendar() {
             </button>
           </div>
 
-          <div className="grid grid-cols-7 gap-2 mb-2">
+          <div className="grid grid-cols-7 gap-0 md:gap-2 mb-1 md:mb-2">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center font-semibold text-gray-600 text-sm py-2">
+              <div key={day} className="text-center font-semibold text-gray-600 text-xs md:text-sm py-1 md:py-2">
                 {day}
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-0 md:gap-2">
             {renderCalendar()}
           </div>
         </div>
