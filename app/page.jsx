@@ -16,6 +16,8 @@ export default function BibleCalendar() {
   const [dateRead, setDateRead] = useState('');
   const [currentReadingId, setCurrentReadingId] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -129,6 +131,7 @@ export default function BibleCalendar() {
       return;
     }
 
+    setIsSaving(true);
     try {
       if (isEditMode && currentReadingId) {
         // Update existing reading
@@ -177,6 +180,8 @@ export default function BibleCalendar() {
     } catch (error) {
       console.error('Error saving reading:', error);
       alert('Failed to save reading');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -185,6 +190,7 @@ export default function BibleCalendar() {
 
     if (!confirm('Are you sure you want to delete this reading?')) return;
 
+    setIsDeleting(true);
     try {
       const response = await fetch(`/api/readings/${currentReadingId}`, {
         method: 'DELETE'
@@ -206,6 +212,8 @@ export default function BibleCalendar() {
     } catch (error) {
       console.error('Error deleting reading:', error);
       alert('Failed to delete reading');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -400,7 +408,8 @@ export default function BibleCalendar() {
                   value={bibleBook}
                   onChange={(e) => setBibleBook(e.target.value)}
                   placeholder="e.g., Genesis, Psalm, Matthew"
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  disabled={isSaving || isDeleting}
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -414,7 +423,8 @@ export default function BibleCalendar() {
                     value={chapters}
                     onChange={(e) => setChapters(e.target.value)}
                     placeholder="e.g., 1-3, 5"
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    disabled={isSaving || isDeleting}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -427,7 +437,8 @@ export default function BibleCalendar() {
                     value={verses}
                     onChange={(e) => setVerses(e.target.value)}
                     placeholder="e.g., 1-10"
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    disabled={isSaving || isDeleting}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -440,7 +451,8 @@ export default function BibleCalendar() {
                   type="date"
                   value={dateRead}
                   onChange={(e) => setDateRead(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  disabled={isSaving || isDeleting}
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -449,23 +461,42 @@ export default function BibleCalendar() {
               {isEditMode && (
                 <button
                   onClick={deleteReading}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                  disabled={isSaving || isDeleting}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </>
+                  )}
                 </button>
               )}
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-gray-700"
+                disabled={isSaving || isDeleting}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={saveReading}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
+                disabled={isSaving || isDeleting}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {isEditMode ? 'Update' : 'Save'}
+                {isSaving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    {isEditMode ? 'Updating...' : 'Saving...'}
+                  </span>
+                ) : (
+                  isEditMode ? 'Update' : 'Save'
+                )}
               </button>
             </div>
           </div>
