@@ -234,28 +234,60 @@ export default function BibleCalendar() {
       const dateKey = formatDateKey(date);
       const dayData = readingData[dateKey] || {};
       const isToday = isCurrentMonth && day === today.getDate();
+      const isPastDay = date < today && !isToday;
+      const isMissed = isPastDay && !dayData.completed;
 
       days.push(
         <div
           key={day}
           className={`aspect-square border md:rounded-lg p-1 md:p-2 cursor-pointer transition-all hover:shadow-md ${
             isToday ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-          } ${dayData.completed ? 'bg-green-50' : ''}`}
+          }`}
+          style={{
+            backgroundColor: dayData.completed
+              ? 'var(--color-green-100)'
+              : isMissed
+              ? 'var(--color-red-50)'
+              : undefined
+          }}
           onClick={() => openModal(day)}
         >
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-start">
-              <span className={`text-xs md:text-sm font-semibold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+              <span
+                className={`text-xs md:text-sm font-semibold ${
+                  isToday ? 'text-blue-600' : ''
+                }`}
+                style={{
+                  color: isToday
+                    ? undefined
+                    : dayData.completed
+                    ? 'var(--color-green-800)'
+                    : isMissed
+                    ? 'var(--color-red-600)'
+                    : undefined
+                }}
+              >
                 {day}
               </span>
               {dayData.completed && (
-                <Check className="w-3 h-3 md:w-4 md:h-4 text-green-600" />
+                <Check className="w-3 h-3 md:w-4 md:h-4" style={{ color: 'var(--color-green-800)' }} />
               )}
             </div>
             {dayData.reading && (
               <div className="mt-0.5 md:mt-1 flex-1 overflow-hidden">
-                <Book className="w-2 h-2 md:w-3 md:h-3 text-gray-400 mb-0.5 md:mb-1 hidden md:block" />
-                <p className="text-[10px] md:text-xs text-gray-600 line-clamp-3 md:line-clamp-2 leading-tight">
+                <Book
+                  className="w-2 h-2 md:w-3 md:h-3 mb-0.5 md:mb-1 hidden md:block"
+                  style={{
+                    color: dayData.completed ? 'var(--color-green-800)' : undefined
+                  }}
+                />
+                <p
+                  className="text-[10px] md:text-xs line-clamp-3 md:line-clamp-2 leading-tight"
+                  style={{
+                    color: dayData.completed ? 'var(--color-green-800)' : undefined
+                  }}
+                >
                   {dayData.reading}
                 </p>
               </div>
@@ -363,7 +395,11 @@ export default function BibleCalendar() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-indigo-600 font-bold">•</span>
-              Completed days show in green with a checkmark
+              Completed days show in dark green with a checkmark
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-indigo-600 font-bold">•</span>
+              Missed read days (past days without reading) show in red
             </li>
           </ul>
         </div>
