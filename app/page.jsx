@@ -217,6 +217,31 @@ export default function BibleCalendar() {
     }
   };
 
+  const getMonthStats = () => {
+    const daysInMonth = getDaysInMonth(currentDate);
+    const today = new Date();
+    let daysRead = 0;
+    let daysMissed = 0;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      const dateKey = formatDateKey(date);
+      const dayData = readingData[dateKey] || {};
+      const isToday = date.getDate() === today.getDate() &&
+                      date.getMonth() === today.getMonth() &&
+                      date.getFullYear() === today.getFullYear();
+      const isPastDay = date < today && !isToday;
+
+      if (dayData.completed) {
+        daysRead++;
+      } else if (isPastDay) {
+        daysMissed++;
+      }
+    }
+
+    return { daysRead, daysMissed };
+  };
+
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
@@ -348,21 +373,50 @@ export default function BibleCalendar() {
           </div>
 
           <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={previousMonth}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-600" />
-            </button>
-            <h2 className="text-2xl font-semibold text-gray-800">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h2>
-            <button
-              onClick={nextMonth}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <ChevronRight className="w-6 h-6 text-gray-600" />
-            </button>
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
+                <Book className="w-6 h-6 text-indigo-600" />
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h2>
+              <div className="flex gap-2 text-sm flex-wrap mt-2">
+                <span
+                  className="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap gap-1 transition-colors"
+                  style={{
+                    color: 'var(--color-green-600)',
+                    borderColor: 'var(--color-green-600)',
+                    borderWidth: '1px'
+                  }}
+                >
+                  <Check className="h-3 w-3" />
+                  {getMonthStats().daysRead} days read
+                </span>
+                <span
+                  className="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap gap-1 transition-colors"
+                  style={{
+                    color: 'var(--color-gray-600)',
+                    borderColor: 'var(--color-gray-600)',
+                    borderWidth: '1px'
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                  {getMonthStats().daysMissed} days missed
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={previousMonth}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6 text-gray-600" />
+              </button>
+              <button
+                onClick={nextMonth}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <ChevronRight className="w-6 h-6 text-gray-600" />
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-7 gap-0 md:gap-2 mb-1 md:mb-2">
