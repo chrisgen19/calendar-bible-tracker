@@ -195,11 +195,25 @@ export default function BibleCalendar() {
     const existingData = readingData[dateKey] || {};
 
     setSelectedDate(date);
-    setBibleBook(existingData.book || '');
+
+    // If editing existing reading, use its data; otherwise use last used book
+    if (existingData.id) {
+      // Edit mode - use existing data
+      setBibleBook(existingData.book || '');
+      setIsEditMode(true);
+      setIsBookFieldTouched(true); // Don't clear when editing
+    } else {
+      // New reading - use last book as default
+      const lastBook = getLastUsedBook();
+      setBibleBook(lastBook);
+      setLastUsedBook(lastBook);
+      setIsEditMode(false);
+      setIsBookFieldTouched(false); // Allow clearing on focus
+    }
+
     setChapters(existingData.chapters || '');
     setVerses(existingData.verses || '');
     setCurrentReadingId(existingData.id || null);
-    setIsEditMode(!!existingData.id);
     setShowBookSuggestions(false);
     setFilteredBooks([]);
 
