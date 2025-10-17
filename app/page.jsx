@@ -21,6 +21,8 @@ export default function BibleCalendar() {
   const [showBookSuggestions, setShowBookSuggestions] = useState(false);
   const [filteredBooks, setFilteredBooks] = useState([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [lastUsedBook, setLastUsedBook] = useState('');
+  const [isBookFieldTouched, setIsBookFieldTouched] = useState(false);
 
   const bibleBooks = [
     // Old Testament
@@ -113,6 +115,19 @@ export default function BibleCalendar() {
     return phDate.toISOString().split('T')[0];
   };
 
+  const getLastUsedBook = () => {
+    // Get the most recent reading's book name
+    const readings = Object.values(readingData);
+    if (readings.length > 0) {
+      // Sort by dateRead to get the most recent
+      const sortedReadings = readings.sort((a, b) =>
+        new Date(b.dateRead) - new Date(a.dateRead)
+      );
+      return sortedReadings[0].book || '';
+    }
+    return '';
+  };
+
   const handleBookInputChange = (value) => {
     setBibleBook(value);
     setSelectedSuggestionIndex(-1);
@@ -126,6 +141,16 @@ export default function BibleCalendar() {
       setShowBookSuggestions(false);
       setFilteredBooks([]);
     }
+  };
+
+  const handleBookInputFocus = () => {
+    if (!isBookFieldTouched && bibleBook === lastUsedBook) {
+      // Clear the field when user clicks on it for the first time
+      setBibleBook('');
+      setShowBookSuggestions(false);
+      setFilteredBooks([]);
+    }
+    setIsBookFieldTouched(true);
   };
 
   const selectBook = (book) => {
@@ -190,13 +215,18 @@ export default function BibleCalendar() {
 
   const openAddReadingModal = () => {
     const phDate = getPHDate();
+    const lastBook = getLastUsedBook();
     setSelectedDate(new Date(phDate + 'T00:00:00'));
-    setBibleBook('');
+    setBibleBook(lastBook);
+    setLastUsedBook(lastBook);
+    setIsBookFieldTouched(false);
     setChapters('');
     setVerses('');
     setDateRead(phDate);
     setCurrentReadingId(null);
     setIsEditMode(false);
+    setShowBookSuggestions(false);
+    setFilteredBooks([]);
     setShowModal(true);
   };
 
@@ -566,7 +596,7 @@ export default function BibleCalendar() {
                   type="text"
                   value={bibleBook}
                   onChange={(e) => handleBookInputChange(e.target.value)}
-                  onFocus={(e) => handleBookInputChange(e.target.value)}
+                  onFocus={handleBookInputFocus}
                   onKeyDown={handleBookKeyDown}
                   placeholder="e.g., Genesis, Psalm, Matthew"
                   disabled={isSaving || isDeleting}
