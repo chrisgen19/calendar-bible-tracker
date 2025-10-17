@@ -18,6 +18,28 @@ export default function BibleCalendar() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showBookSuggestions, setShowBookSuggestions] = useState(false);
+  const [filteredBooks, setFilteredBooks] = useState([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+
+  const bibleBooks = [
+    // Old Testament
+    'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy',
+    'Joshua', 'Judges', 'Ruth', '1 Samuel', '2 Samuel',
+    '1 Kings', '2 Kings', '1 Chronicles', '2 Chronicles',
+    'Ezra', 'Nehemiah', 'Esther', 'Job', 'Psalms', 'Proverbs',
+    'Ecclesiastes', 'Song of Solomon', 'Isaiah', 'Jeremiah', 'Lamentations',
+    'Ezekiel', 'Daniel', 'Hosea', 'Joel', 'Amos',
+    'Obadiah', 'Jonah', 'Micah', 'Nahum', 'Habakkuk',
+    'Zephaniah', 'Haggai', 'Zechariah', 'Malachi',
+    // New Testament
+    'Matthew', 'Mark', 'Luke', 'John', 'Acts',
+    'Romans', '1 Corinthians', '2 Corinthians', 'Galatians', 'Ephesians',
+    'Philippians', 'Colossians', '1 Thessalonians', '2 Thessalonians',
+    '1 Timothy', '2 Timothy', 'Titus', 'Philemon',
+    'Hebrews', 'James', '1 Peter', '2 Peter',
+    '1 John', '2 John', '3 John', 'Jude', 'Revelation'
+  ];
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -91,6 +113,57 @@ export default function BibleCalendar() {
     return phDate.toISOString().split('T')[0];
   };
 
+  const handleBookInputChange = (value) => {
+    setBibleBook(value);
+    setSelectedSuggestionIndex(-1);
+    if (value.trim()) {
+      const filtered = bibleBooks.filter(book =>
+        book.toLowerCase().startsWith(value.toLowerCase())
+      );
+      setFilteredBooks(filtered);
+      setShowBookSuggestions(filtered.length > 0);
+    } else {
+      setShowBookSuggestions(false);
+      setFilteredBooks([]);
+    }
+  };
+
+  const selectBook = (book) => {
+    setBibleBook(book);
+    setShowBookSuggestions(false);
+    setFilteredBooks([]);
+    setSelectedSuggestionIndex(-1);
+  };
+
+  const handleBookKeyDown = (e) => {
+    if (!showBookSuggestions || filteredBooks.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev =>
+          prev < filteredBooks.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => (prev > 0 ? prev - 1 : -1));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedSuggestionIndex >= 0) {
+          selectBook(filteredBooks[selectedSuggestionIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowBookSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+        break;
+      default:
+        break;
+    }
+  };
+
   const openModal = (day) => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     const dateKey = formatDateKey(date);
@@ -102,6 +175,8 @@ export default function BibleCalendar() {
     setVerses(existingData.verses || '');
     setCurrentReadingId(existingData.id || null);
     setIsEditMode(!!existingData.id);
+    setShowBookSuggestions(false);
+    setFilteredBooks([]);
 
     // Format the date properly for the date input (YYYY-MM-DD)
     const year = date.getFullYear();
@@ -489,18 +564,38 @@ export default function BibleCalendar() {
             </div>
 
             <div className="space-y-4 mb-4">
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Bible Book
                 </label>
                 <input
                   type="text"
                   value={bibleBook}
-                  onChange={(e) => setBibleBook(e.target.value)}
+                  onChange={(e) => handleBookInputChange(e.target.value)}
+                  onFocus={(e) => handleBookInputChange(e.target.value)}
+                  onKeyDown={handleBookKeyDown}
                   placeholder="e.g., Genesis, Psalm, Matthew"
                   disabled={isSaving || isDeleting}
                   className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  autoComplete="off"
                 />
+                {showBookSuggestions && filteredBooks.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredBooks.map((book, index) => (
+                      <div
+                        key={book}
+                        onClick={() => selectBook(book)}
+                        className={`px-3 py-2 cursor-pointer transition-colors text-gray-700 ${
+                          index === selectedSuggestionIndex
+                            ? 'bg-indigo-100'
+                            : 'hover:bg-indigo-50'
+                        }`}
+                      >
+                        {book}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
