@@ -6,7 +6,8 @@
       "Bash(npm install:*)",
       "Bash(npx prisma:*)",
       "Bash(find:*)",
-      "Bash(timeout 5 echo:*)"
+      "Bash(timeout 5 echo:*)",
+      "Bash(taskkill //F //PID 32048)"
     ],
     "deny": [],
     "ask": []
