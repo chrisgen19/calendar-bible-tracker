@@ -4,7 +4,9 @@
       "Bash(mkdir:*)",
       "Bash(npm run dev:*)",
       "Bash(npm install:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(find:*)",
+      "Bash(timeout 5 echo:*)"
     ],
     "deny": [],
     "ask": []

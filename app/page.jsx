@@ -23,6 +23,7 @@ export default function BibleCalendar() {
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [lastUsedBook, setLastUsedBook] = useState('');
   const [isBookFieldTouched, setIsBookFieldTouched] = useState(false);
+  const [selectedDateReadings, setSelectedDateReadings] = useState([]);
 
   const bibleBooks = [
     // Old Testament
@@ -84,7 +85,7 @@ export default function BibleCalendar() {
       data.forEach(reading => {
         const date = new Date(reading.dateRead);
         const key = formatDateKey(date);
-        readingsMap[key] = {
+        const readingEntry = {
           id: reading.id,
           reading: `${reading.bibleBook} ${reading.chapters}${reading.verses ? ':' + reading.verses : ''}`,
           book: reading.bibleBook,
@@ -93,6 +94,12 @@ export default function BibleCalendar() {
           dateRead: reading.dateRead,
           completed: reading.completed
         };
+
+        // Support multiple readings per date - store as array
+        if (!readingsMap[key]) {
+          readingsMap[key] = [];
+        }
+        readingsMap[key].push(readingEntry);
       });
 
       setReadingData(readingsMap);
@@ -117,10 +124,10 @@ export default function BibleCalendar() {
 
   const getLastUsedBook = () => {
     // Get the most recent reading's book name
-    const readings = Object.values(readingData);
-    if (readings.length > 0) {
+    const allReadings = Object.values(readingData).flat();
+    if (allReadings.length > 0) {
       // Sort by dateRead to get the most recent
-      const sortedReadings = readings.sort((a, b) =>
+      const sortedReadings = allReadings.sort((a, b) =>
         new Date(b.dateRead) - new Date(a.dateRead)
       );
       return sortedReadings[0].book || '';
@@ -192,28 +199,20 @@ export default function BibleCalendar() {
   const openModal = (day) => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     const dateKey = formatDateKey(date);
-    const existingData = readingData[dateKey] || {};
+    const existingReadings = readingData[dateKey] || [];
 
     setSelectedDate(date);
+    setSelectedDateReadings(existingReadings);
 
-    // If editing existing reading, use its data; otherwise use last used book
-    if (existingData.id) {
-      // Edit mode - use existing data
-      setBibleBook(existingData.book || '');
-      setIsEditMode(true);
-      setIsBookFieldTouched(true); // Don't clear when editing
-    } else {
-      // New reading - use last book as default
-      const lastBook = getLastUsedBook();
-      setBibleBook(lastBook);
-      setLastUsedBook(lastBook);
-      setIsEditMode(false);
-      setIsBookFieldTouched(false); // Allow clearing on focus
-    }
-
-    setChapters(existingData.chapters || '');
-    setVerses(existingData.verses || '');
-    setCurrentReadingId(existingData.id || null);
+    // Always start in "add new reading" mode
+    const lastBook = getLastUsedBook();
+    setBibleBook(lastBook);
+    setLastUsedBook(lastBook);
+    setChapters('');
+    setVerses('');
+    setCurrentReadingId(null);
+    setIsEditMode(false);
+    setIsBookFieldTouched(false); // Allow clearing on focus
     setShowBookSuggestions(false);
     setFilteredBooks([]);
 
@@ -230,7 +229,12 @@ export default function BibleCalendar() {
   const openAddReadingModal = () => {
     const phDate = getPHDate();
     const lastBook = getLastUsedBook();
-    setSelectedDate(new Date(phDate + 'T00:00:00'));
+    const date = new Date(phDate + 'T00:00:00');
+    const dateKey = formatDateKey(date);
+    const existingReadings = readingData[dateKey] || [];
+
+    setSelectedDate(date);
+    setSelectedDateReadings(existingReadings);
     setBibleBook(lastBook);
     setLastUsedBook(lastBook);
     setIsBookFieldTouched(false);
@@ -242,6 +246,26 @@ export default function BibleCalendar() {
     setShowBookSuggestions(false);
     setFilteredBooks([]);
     setShowModal(true);
+  };
+
+  const editReading = (reading) => {
+    setBibleBook(reading.book || '');
+    setChapters(reading.chapters || '');
+    setVerses(reading.verses || '');
+    setCurrentReadingId(reading.id);
+    setIsEditMode(true);
+    setIsBookFieldTouched(true);
+  };
+
+  const cancelEdit = () => {
+    const lastBook = getLastUsedBook();
+    setBibleBook(lastBook);
+    setLastUsedBook(lastBook);
+    setChapters('');
+    setVerses('');
+    setCurrentReadingId(null);
+    setIsEditMode(false);
+    setIsBookFieldTouched(false);
   };
 
   const saveReading = async () => {
@@ -288,14 +312,21 @@ export default function BibleCalendar() {
       // Refresh readings
       await fetchReadings();
 
-      // Close modal and reset
-      setShowModal(false);
-      setBibleBook('');
+      // Update the selected date readings list
+      const date = new Date(dateRead);
+      const dateKey = formatDateKey(date);
+      const updatedReadings = readingData[dateKey] || [];
+      setSelectedDateReadings(updatedReadings);
+
+      // Reset form to add new reading mode
+      const lastBook = getLastUsedBook();
+      setBibleBook(lastBook);
+      setLastUsedBook(lastBook);
       setChapters('');
       setVerses('');
-      setDateRead('');
       setCurrentReadingId(null);
       setIsEditMode(false);
+      setIsBookFieldTouched(false);
     } catch (error) {
       console.error('Error saving reading:', error);
       alert('Failed to save reading');
@@ -320,14 +351,21 @@ export default function BibleCalendar() {
       // Refresh readings
       await fetchReadings();
 
-      // Close modal and reset
-      setShowModal(false);
-      setBibleBook('');
+      // Update the selected date readings list
+      const date = new Date(dateRead);
+      const dateKey = formatDateKey(date);
+      const updatedReadings = readingData[dateKey] || [];
+      setSelectedDateReadings(updatedReadings);
+
+      // Reset form to add new reading mode
+      const lastBook = getLastUsedBook();
+      setBibleBook(lastBook);
+      setLastUsedBook(lastBook);
       setChapters('');
       setVerses('');
-      setDateRead('');
       setCurrentReadingId(null);
       setIsEditMode(false);
+      setIsBookFieldTouched(false);
     } catch (error) {
       console.error('Error deleting reading:', error);
       alert('Failed to delete reading');
@@ -345,13 +383,13 @@ export default function BibleCalendar() {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
       const dateKey = formatDateKey(date);
-      const dayData = readingData[dateKey] || {};
+      const dayReadings = readingData[dateKey] || [];
       const isToday = date.getDate() === today.getDate() &&
                       date.getMonth() === today.getMonth() &&
                       date.getFullYear() === today.getFullYear();
       const isPastDay = date < today && !isToday;
 
-      if (dayData.completed) {
+      if (dayReadings.length > 0) {
         daysRead++;
       } else if (isPastDay) {
         daysMissed++;
@@ -376,10 +414,12 @@ export default function BibleCalendar() {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
       const dateKey = formatDateKey(date);
-      const dayData = readingData[dateKey] || {};
+      const dayReadings = readingData[dateKey] || [];
+      const hasReadings = dayReadings.length > 0;
+      const allCompleted = hasReadings && dayReadings.every(r => r.completed);
       const isToday = isCurrentMonth && day === today.getDate();
       const isPastDay = date < today && !isToday;
-      const isMissed = isPastDay && !dayData.completed;
+      const isMissed = isPastDay && !hasReadings;
 
       days.push(
         <div
@@ -388,7 +428,7 @@ export default function BibleCalendar() {
             isToday ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
           }`}
           style={{
-            backgroundColor: dayData.completed
+            backgroundColor: allCompleted
               ? 'var(--color-green-100)'
               : isMissed
               ? 'var(--color-red-50)'
@@ -405,7 +445,7 @@ export default function BibleCalendar() {
                 style={{
                   color: isToday
                     ? undefined
-                    : dayData.completed
+                    : allCompleted
                     ? 'var(--color-green-800)'
                     : isMissed
                     ? 'var(--color-red-600)'
@@ -414,26 +454,47 @@ export default function BibleCalendar() {
               >
                 {day}
               </span>
-              {dayData.completed && (
+              {allCompleted && (
                 <Check className="w-3 h-3 md:w-4 md:h-4" style={{ color: 'var(--color-green-800)' }} />
               )}
             </div>
-            {dayData.reading && (
+            {hasReadings && (
               <div className="mt-0.5 md:mt-1 flex-1 overflow-hidden">
                 <Book
                   className="w-2 h-2 md:w-3 md:h-3 mb-0.5 md:mb-1 hidden md:block"
                   style={{
-                    color: dayData.completed ? 'var(--color-green-800)' : undefined
+                    color: allCompleted ? 'var(--color-green-800)' : undefined
                   }}
                 />
-                <p
-                  className="text-[10px] md:text-xs line-clamp-3 md:line-clamp-2 leading-tight"
-                  style={{
-                    color: dayData.completed ? 'var(--color-green-800)' : undefined
-                  }}
-                >
-                  {dayData.reading}
-                </p>
+                {dayReadings.length === 1 ? (
+                  <p
+                    className="text-[10px] md:text-xs line-clamp-3 md:line-clamp-2 leading-tight"
+                    style={{
+                      color: allCompleted ? 'var(--color-green-800)' : undefined
+                    }}
+                  >
+                    {dayReadings[0].reading}
+                  </p>
+                ) : (
+                  <div>
+                    <p
+                      className="text-[10px] md:text-xs line-clamp-2 leading-tight"
+                      style={{
+                        color: allCompleted ? 'var(--color-green-800)' : undefined
+                      }}
+                    >
+                      {dayReadings[0].reading}
+                    </p>
+                    <p
+                      className="text-[9px] md:text-[10px] font-semibold mt-0.5"
+                      style={{
+                        color: allCompleted ? 'var(--color-green-700)' : 'var(--color-indigo-600)'
+                      }}
+                    >
+                      +{dayReadings.length - 1} more
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -560,6 +621,10 @@ export default function BibleCalendar() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-indigo-600 font-bold">•</span>
+              You can add multiple readings to the same day
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-indigo-600 font-bold">•</span>
               Mark days complete by adding what you read
             </li>
             <li className="flex items-start gap-2">
@@ -580,7 +645,7 @@ export default function BibleCalendar() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-2xl font-bold text-gray-800">Bible Reading</h3>
@@ -601,6 +666,61 @@ export default function BibleCalendar() {
               </button>
             </div>
 
+            {/* Existing Readings List */}
+            {selectedDateReadings.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                  {selectedDateReadings.length} Reading{selectedDateReadings.length > 1 ? 's' : ''} on this day
+                </h4>
+                <div className="space-y-2">
+                  {selectedDateReadings.map((reading) => (
+                    <div
+                      key={reading.id}
+                      className={`p-3 rounded-lg border transition-colors ${
+                        currentReadingId === reading.id
+                          ? 'border-indigo-500 bg-indigo-50'
+                          : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-800">{reading.reading}</p>
+                          {reading.completed && (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1">
+                              <Check className="w-3 h-3" />
+                              Completed
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => editReading(reading)}
+                          disabled={isSaving || isDeleting}
+                          className="ml-2 px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-100 rounded transition-colors disabled:opacity-50"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
+                    {isEditMode ? 'Edit Reading' : 'Add Another Reading'}
+                  </p>
+                  {isEditMode && (
+                    <button
+                      onClick={cancelEdit}
+                      disabled={isSaving || isDeleting}
+                      className="mb-2 text-xs text-gray-600 hover:text-gray-800 underline disabled:opacity-50"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Reading Form */}
             <div className="space-y-4 mb-4">
               <div className="relative">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -705,7 +825,7 @@ export default function BibleCalendar() {
                 disabled={isSaving || isDeleting}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
-                Cancel
+                {selectedDateReadings.length > 0 ? 'Close' : 'Cancel'}
               </button>
               <button
                 onClick={saveReading}
