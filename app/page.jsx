@@ -466,35 +466,29 @@ export default function BibleCalendar() {
                     color: allCompleted ? 'var(--color-green-800)' : undefined
                   }}
                 />
-                {dayReadings.length === 1 ? (
-                  <p
-                    className="text-[10px] md:text-xs line-clamp-3 md:line-clamp-2 leading-tight"
-                    style={{
-                      color: allCompleted ? 'var(--color-green-800)' : undefined
-                    }}
-                  >
-                    {dayReadings[0].reading}
-                  </p>
-                ) : (
-                  <div>
+                <div className="space-y-0.5">
+                  {dayReadings.slice(0, 3).map((reading) => (
                     <p
-                      className="text-[10px] md:text-xs line-clamp-2 leading-tight"
+                      key={reading.id}
+                      className="text-[10px] md:text-xs leading-tight"
                       style={{
                         color: allCompleted ? 'var(--color-green-800)' : undefined
                       }}
                     >
-                      {dayReadings[0].reading}
+                      {reading.reading}
                     </p>
+                  ))}
+                  {dayReadings.length > 3 && (
                     <p
-                      className="text-[9px] md:text-[10px] font-semibold mt-0.5"
+                      className="text-[9px] md:text-[10px] font-semibold"
                       style={{
                         color: allCompleted ? 'var(--color-green-700)' : 'var(--color-indigo-600)'
                       }}
                     >
-                      +{dayReadings.length - 1} more
+                      +{dayReadings.length - 3} more
                     </p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
