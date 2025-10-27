@@ -315,36 +315,16 @@ export default function BibleCalendar() {
       // Refresh readings
       await fetchReadings();
 
-      // Determine if we should close the modal or keep it open
-      const shouldCloseModal = modalOpenedFrom === 'calendar' && selectedDateReadings.length === 0 && !isEditMode;
-
-      if (shouldCloseModal) {
-        // Close modal after first save when opened from calendar click
-        setShowModal(false);
-        setBibleBook('');
-        setChapters('');
-        setVerses('');
-        setDateRead('');
-        setCurrentReadingId(null);
-        setIsEditMode(false);
-        setModalOpenedFrom(null);
-      } else {
-        // Keep modal open and update the readings list for adding more
-        const date = new Date(dateRead);
-        const dateKey = formatDateKey(date);
-        const updatedReadings = readingData[dateKey] || [];
-        setSelectedDateReadings(updatedReadings);
-
-        // Reset form to add new reading mode
-        const lastBook = getLastUsedBook();
-        setBibleBook(lastBook);
-        setLastUsedBook(lastBook);
-        setChapters('');
-        setVerses('');
-        setCurrentReadingId(null);
-        setIsEditMode(false);
-        setIsBookFieldTouched(false);
-      }
+      // Close modal after saving (both for new readings and edits)
+      setShowModal(false);
+      setBibleBook('');
+      setChapters('');
+      setVerses('');
+      setDateRead('');
+      setCurrentReadingId(null);
+      setIsEditMode(false);
+      setModalOpenedFrom(null);
+      setIsBookFieldTouched(false);
     } catch (error) {
       console.error('Error saving reading:', error);
       alert('Failed to save reading');
