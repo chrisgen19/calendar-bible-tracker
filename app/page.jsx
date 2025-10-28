@@ -456,6 +456,7 @@ export default function BibleCalendar() {
           onAddReading={openAddReadingModal}
           onLogout={logout}
           user={user}
+          readingData={readingData}
         />
 
         <CalendarGrid
