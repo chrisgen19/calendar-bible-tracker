@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Book, Check, X, Plus, LogOut, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Book, Check, X, Plus, LogOut, Trash2, FileText } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 
 export default function BibleCalendar() {
@@ -25,6 +25,10 @@ export default function BibleCalendar() {
   const [isBookFieldTouched, setIsBookFieldTouched] = useState(false);
   const [selectedDateReadings, setSelectedDateReadings] = useState([]);
   const [modalOpenedFrom, setModalOpenedFrom] = useState(null); // 'calendar' or 'add-button'
+  const [showNotesForm, setShowNotesForm] = useState(false);
+  const [notesContent, setNotesContent] = useState('');
+  const [tempNotes, setTempNotes] = useState('');
+  const [hasNotes, setHasNotes] = useState(false);
 
   const bibleBooks = [
     // Old Testament
@@ -217,6 +221,10 @@ export default function BibleCalendar() {
     setIsBookFieldTouched(false); // Allow clearing on focus
     setShowBookSuggestions(false);
     setFilteredBooks([]);
+    setNotesContent('');
+    setTempNotes('');
+    setShowNotesForm(false);
+    setHasNotes(false);
 
     // Format the date properly for the date input (YYYY-MM-DD)
     const year = date.getFullYear();
@@ -248,16 +256,41 @@ export default function BibleCalendar() {
     setIsEditMode(false);
     setShowBookSuggestions(false);
     setFilteredBooks([]);
+    setNotesContent('');
+    setTempNotes('');
+    setShowNotesForm(false);
+    setHasNotes(false);
     setShowModal(true);
   };
 
-  const editReading = (reading) => {
+  const editReading = async (reading) => {
     setBibleBook(reading.book || '');
     setChapters(reading.chapters || '');
     setVerses(reading.verses || '');
     setCurrentReadingId(reading.id);
     setIsEditMode(true);
     setIsBookFieldTouched(true);
+
+    // Fetch existing notes for this reading
+    try {
+      const response = await fetch(`/api/notes?bibleReadingId=${reading.id}`);
+      if (response.ok) {
+        const notes = await response.json();
+        if (notes && notes.length > 0) {
+          // Load the most recent note
+          const latestNote = notes[0];
+          setNotesContent(latestNote.content);
+          setTempNotes(latestNote.content);
+          setHasNotes(true);
+        } else {
+          setNotesContent('');
+          setTempNotes('');
+          setHasNotes(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+    }
   };
 
   const cancelEdit = () => {
@@ -271,6 +304,22 @@ export default function BibleCalendar() {
     setIsBookFieldTouched(false);
   };
 
+  const openNotesForm = () => {
+    setShowNotesForm(true);
+  };
+
+  const saveNotes = () => {
+    // Store notes temporarily until the reading is saved
+    setTempNotes(notesContent);
+    setHasNotes(notesContent && notesContent.trim() !== '');
+    setShowNotesForm(false);
+  };
+
+  const cancelNotes = () => {
+    setNotesContent(tempNotes); // Restore previous notes if cancelled
+    setShowNotesForm(false);
+  };
+
   const saveReading = async () => {
     if (!user || !dateRead || !bibleBook || !chapters) {
       alert('Please fill in all required fields');
@@ -279,6 +328,8 @@ export default function BibleCalendar() {
 
     setIsSaving(true);
     try {
+      let readingId = currentReadingId;
+
       if (isEditMode && currentReadingId) {
         // Update existing reading
         const response = await fetch(`/api/readings/${currentReadingId}`, {
@@ -310,6 +361,23 @@ export default function BibleCalendar() {
         });
 
         if (!response.ok) throw new Error('Failed to create reading');
+
+        const data = await response.json();
+        readingId = data.id;
+      }
+
+      // If there are temporary notes, save them
+      if (tempNotes && tempNotes.trim() !== '') {
+        const notesResponse = await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bibleReadingId: readingId,
+            content: tempNotes
+          })
+        });
+
+        if (!notesResponse.ok) throw new Error('Failed to save notes');
       }
 
       // Refresh readings
@@ -325,6 +393,10 @@ export default function BibleCalendar() {
       setIsEditMode(false);
       setModalOpenedFrom(null);
       setIsBookFieldTouched(false);
+      setNotesContent('');
+      setTempNotes('');
+      setShowNotesForm(false);
+      setHasNotes(false);
     } catch (error) {
       console.error('Error saving reading:', error);
       alert('Failed to save reading');
@@ -712,128 +784,178 @@ export default function BibleCalendar() {
               </div>
             )}
 
-            {/* Reading Form */}
-            <div className="space-y-4 mb-4">
-              <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Bible Book
-                </label>
-                <input
-                  type="text"
-                  value={bibleBook}
-                  onChange={(e) => handleBookInputChange(e.target.value)}
-                  onFocus={handleBookInputFocus}
-                  onKeyDown={handleBookKeyDown}
-                  placeholder="e.g., Genesis, Psalm, Matthew"
-                  disabled={isSaving || isDeleting}
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  autoComplete="off"
-                />
-                {showBookSuggestions && filteredBooks.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {filteredBooks.map((book, index) => (
-                      <div
-                        key={book}
-                        onClick={() => selectBook(book)}
-                        className={`px-3 py-2 cursor-pointer transition-colors text-gray-700 ${
-                          index === selectedSuggestionIndex
-                            ? 'bg-indigo-100'
-                            : 'hover:bg-indigo-50'
-                        }`}
-                      >
-                        {book}
+            {/* Conditional Form Display */}
+            {!showNotesForm ? (
+              <>
+                {/* Reading Form */}
+                <div className="space-y-4 mb-4">
+                  <div className="relative">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Bible Book
+                    </label>
+                    <input
+                      type="text"
+                      value={bibleBook}
+                      onChange={(e) => handleBookInputChange(e.target.value)}
+                      onFocus={handleBookInputFocus}
+                      onKeyDown={handleBookKeyDown}
+                      placeholder="e.g., Genesis, Psalm, Matthew"
+                      disabled={isSaving || isDeleting}
+                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      autoComplete="off"
+                    />
+                    {showBookSuggestions && filteredBooks.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {filteredBooks.map((book, index) => (
+                          <div
+                            key={book}
+                            onClick={() => selectBook(book)}
+                            className={`px-3 py-2 cursor-pointer transition-colors text-gray-700 ${
+                              index === selectedSuggestionIndex
+                                ? 'bg-indigo-100'
+                                : 'hover:bg-indigo-50'
+                            }`}
+                          >
+                            {book}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Chapters
-                  </label>
-                  <input
-                    type="text"
-                    value={chapters}
-                    onChange={(e) => setChapters(e.target.value)}
-                    placeholder="e.g., 1-3, 5"
-                    disabled={isSaving || isDeleting}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Chapters
+                      </label>
+                      <input
+                        type="text"
+                        value={chapters}
+                        onChange={(e) => setChapters(e.target.value)}
+                        placeholder="e.g., 1-3, 5"
+                        disabled={isSaving || isDeleting}
+                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Verses
+                      </label>
+                      <input
+                        type="text"
+                        value={verses}
+                        onChange={(e) => setVerses(e.target.value)}
+                        placeholder="e.g., 1-10"
+                        disabled={isSaving || isDeleting}
+                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Date Read
+                    </label>
+                    <input
+                      type="date"
+                      value={dateRead}
+                      onChange={(e) => setDateRead(e.target.value)}
+                      disabled={isSaving || isDeleting}
+                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Verses
-                  </label>
-                  <input
-                    type="text"
-                    value={verses}
-                    onChange={(e) => setVerses(e.target.value)}
-                    placeholder="e.g., 1-10"
-                    disabled={isSaving || isDeleting}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Date Read
-                </label>
-                <input
-                  type="date"
-                  value={dateRead}
-                  onChange={(e) => setDateRead(e.target.value)}
-                  disabled={isSaving || isDeleting}
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              {isEditMode && (
+                {/* Add/Edit Notes Button */}
                 <button
-                  onClick={deleteReading}
+                  onClick={openNotesForm}
                   disabled={isSaving || isDeleting}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed mb-3"
                 >
-                  {isDeleting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Deleting...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </>
-                  )}
+                  <FileText className="w-4 h-4" />
+                  {hasNotes ? 'Edit Notes' : 'Add Notes'}
                 </button>
-              )}
-              <button
-                onClick={() => setShowModal(false)}
-                disabled={isSaving || isDeleting}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                {selectedDateReadings.length > 0 ? 'Close' : 'Cancel'}
-              </button>
-              <button
-                onClick={saveReading}
-                disabled={isSaving || isDeleting}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {isSaving ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    {isEditMode ? 'Updating...' : 'Saving...'}
-                  </span>
-                ) : (
-                  isEditMode ? 'Update' : 'Save'
-                )}
-              </button>
-            </div>
+
+                {/* Reading Form Buttons */}
+                <div className="flex gap-3">
+                  {isEditMode && (
+                    <button
+                      onClick={deleteReading}
+                      disabled={isSaving || isDeleting}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {isDeleting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </>
+                      )}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowModal(false)}
+                    disabled={isSaving || isDeleting}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    {selectedDateReadings.length > 0 ? 'Close' : 'Cancel'}
+                  </button>
+                  <button
+                    onClick={saveReading}
+                    disabled={isSaving || isDeleting}
+                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        {isEditMode ? 'Updating...' : 'Saving...'}
+                      </span>
+                    ) : (
+                      isEditMode ? 'Update' : 'Save'
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Notes Form */}
+                <div className="space-y-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Notes
+                    </label>
+                    <textarea
+                      value={notesContent}
+                      onChange={(e) => setNotesContent(e.target.value)}
+                      placeholder="Write your notes here..."
+                      rows={8}
+                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Notes Form Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={cancelNotes}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveNotes}
+                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
+                  >
+                    Save Note
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

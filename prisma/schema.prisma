@@ -70,7 +70,21 @@ model BibleReading {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  readingNotes ReadingNote[]
+
   @@index([userId])
   @@index([dateRead])
   @@map("bible_readings")
+}
+
+model ReadingNote {
+  id              String        @id @default(uuid())
+  bibleReadingId  String
+  bibleReading    BibleReading  @relation(fields: [bibleReadingId], references: [id], onDelete: Cascade)
+  content         String        @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([bibleReadingId])
+  @@map("reading_notes")
 }
