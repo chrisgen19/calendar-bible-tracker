@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Book, Check, X, Plus, LogOut, Trash2, FileText } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
+import CalendarHeader from './components/CalendarHeader';
+import CalendarGrid from './components/CalendarGrid';
+import CalendarLegend from './components/CalendarLegend';
+import ReadingModal from './components/ReadingModal';
 
 export default function BibleCalendar() {
   const { user, logout, loading } = useAuth();
@@ -48,23 +51,6 @@ export default function BibleCalendar() {
     'Hebrews', 'James', '1 Peter', '2 Peter',
     '1 John', '2 John', '3 John', 'Jude', 'Revelation'
   ];
-
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    return new Date(year, month + 1, 0).getDate();
-  };
-
-  const getFirstDayOfMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    return new Date(year, month, 1).getDay();
-  };
 
   const formatDateKey = (date) => {
     return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
@@ -444,130 +430,6 @@ export default function BibleCalendar() {
     }
   };
 
-  const getMonthStats = () => {
-    const daysInMonth = getDaysInMonth(currentDate);
-    const today = new Date();
-    let daysRead = 0;
-    let daysMissed = 0;
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-      const dateKey = formatDateKey(date);
-      const dayReadings = readingData[dateKey] || [];
-      const isToday = date.getDate() === today.getDate() &&
-                      date.getMonth() === today.getMonth() &&
-                      date.getFullYear() === today.getFullYear();
-      const isPastDay = date < today && !isToday;
-
-      if (dayReadings.length > 0) {
-        daysRead++;
-      } else if (isPastDay) {
-        daysMissed++;
-      }
-    }
-
-    return { daysRead, daysMissed };
-  };
-
-  const renderCalendar = () => {
-    const daysInMonth = getDaysInMonth(currentDate);
-    const firstDay = getFirstDayOfMonth(currentDate);
-    const days = [];
-    const today = new Date();
-    const isCurrentMonth = currentDate.getMonth() === today.getMonth() &&
-                          currentDate.getFullYear() === today.getFullYear();
-
-    for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="aspect-square"></div>);
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-      const dateKey = formatDateKey(date);
-      const dayReadings = readingData[dateKey] || [];
-      const hasReadings = dayReadings.length > 0;
-      const allCompleted = hasReadings && dayReadings.every(r => r.completed);
-      const isToday = isCurrentMonth && day === today.getDate();
-      const isPastDay = date < today && !isToday;
-      const isMissed = isPastDay && !hasReadings;
-
-      days.push(
-        <div
-          key={day}
-          className={`aspect-square border md:rounded-lg p-1 md:p-2 cursor-pointer transition-all hover:shadow-md ${
-            isToday ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-          }`}
-          style={{
-            backgroundColor: allCompleted
-              ? 'var(--color-green-100)'
-              : isMissed
-              ? 'var(--color-red-50)'
-              : undefined
-          }}
-          onClick={() => openModal(day)}
-        >
-          <div className="flex flex-col h-full">
-            <div className="flex justify-between items-start">
-              <span
-                className={`text-xs md:text-sm font-semibold ${
-                  isToday ? 'text-blue-600' : ''
-                }`}
-                style={{
-                  color: isToday
-                    ? undefined
-                    : allCompleted
-                    ? 'var(--color-green-800)'
-                    : isMissed
-                    ? 'var(--color-red-600)'
-                    : undefined
-                }}
-              >
-                {day}
-              </span>
-              {allCompleted && (
-                <Check className="w-3 h-3 md:w-4 md:h-4" style={{ color: 'var(--color-green-800)' }} />
-              )}
-            </div>
-            {hasReadings && (
-              <div className="mt-0.5 md:mt-1 flex-1 overflow-hidden">
-                <Book
-                  className="w-2 h-2 md:w-3 md:h-3 mb-0.5 md:mb-1 hidden md:block"
-                  style={{
-                    color: allCompleted ? 'var(--color-green-800)' : undefined
-                  }}
-                />
-                <div className="space-y-0.5">
-                  {dayReadings.slice(0, 3).map((reading) => (
-                    <p
-                      key={reading.id}
-                      className="text-[10px] md:text-xs leading-tight"
-                      style={{
-                        color: allCompleted ? 'var(--color-green-800)' : undefined
-                      }}
-                    >
-                      {reading.reading}
-                    </p>
-                  ))}
-                  {dayReadings.length > 3 && (
-                    <p
-                      className="text-[9px] md:text-[10px] font-semibold"
-                      style={{
-                        color: allCompleted ? 'var(--color-green-700)' : 'var(--color-indigo-600)'
-                      }}
-                    >
-                      +{dayReadings.length - 3} more
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    return days;
-  };
 
   if (loading) {
     return (
@@ -586,379 +448,60 @@ export default function BibleCalendar() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div className="text-center md:text-left">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center justify-center md:justify-start gap-2">
-                <Book className="w-6 h-6 md:w-8 md:h-8 text-indigo-600" />
-                Bible Reading Calendar
-              </h1>
-              <p className="text-sm md:text-base text-gray-600 mt-1">
-                Welcome, {user.firstName} {user.lastName} - Track your daily scripture reading
-              </p>
-            </div>
-            <div className="flex gap-2 justify-center md:justify-end flex-wrap">
-              <button
-                onClick={openAddReadingModal}
-                className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-sm md:text-base"
-              >
-                <Plus className="w-4 h-4 md:w-5 md:h-5" />
-                Add Reading
-              </button>
-              <button
-                onClick={logout}
-                className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-semibold text-sm md:text-base"
-              >
-                <LogOut className="w-4 h-4 md:w-5 md:h-5" />
-                Logout
-              </button>
-            </div>
-          </div>
+      <div className="max-w-6xl mx-auto space-y-6">
+        <CalendarHeader
+          currentDate={currentDate}
+          onPreviousMonth={previousMonth}
+          onNextMonth={nextMonth}
+          onAddReading={openAddReadingModal}
+          onLogout={logout}
+          user={user}
+        />
 
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
-                <Book className="w-6 h-6 text-indigo-600" />
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </h2>
-              <div className="flex gap-2 text-sm flex-wrap mt-2">
-                <span
-                  className="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap gap-1 transition-colors"
-                  style={{
-                    color: 'var(--color-green-600)',
-                    borderColor: 'var(--color-green-600)',
-                    borderWidth: '1px'
-                  }}
-                >
-                  <Check className="h-3 w-3" />
-                  {getMonthStats().daysRead} days read
-                </span>
-                <span
-                  className="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap gap-1 transition-colors"
-                  style={{
-                    color: 'var(--color-gray-600)',
-                    borderColor: 'var(--color-gray-600)',
-                    borderWidth: '1px'
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                  {getMonthStats().daysMissed} days missed
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={previousMonth}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <ChevronLeft className="w-6 h-6 text-gray-600" />
-              </button>
-              <button
-                onClick={nextMonth}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <ChevronRight className="w-6 h-6 text-gray-600" />
-              </button>
-            </div>
-          </div>
+        <CalendarGrid
+          currentDate={currentDate}
+          readingData={readingData}
+          onDayClick={openModal}
+        />
 
-          <div className="grid grid-cols-7 gap-0 md:gap-2 mb-1 md:mb-2">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center font-semibold text-gray-600 text-xs md:text-sm py-1 md:py-2">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-0 md:gap-2">
-            {renderCalendar()}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-xl p-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Quick Tips</h3>
-          <ul className="space-y-2 text-gray-600">
-            <li className="flex items-start gap-2">
-              <span className="text-indigo-600 font-bold">•</span>
-              Click any day to add or edit your Bible reading
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-indigo-600 font-bold">•</span>
-              You can add multiple readings to the same day
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-indigo-600 font-bold">•</span>
-              Mark days complete by adding what you read
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-indigo-600 font-bold">•</span>
-              Today's date is highlighted in blue
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-indigo-600 font-bold">•</span>
-              Completed days show in dark green with a checkmark
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-indigo-600 font-bold">•</span>
-              Missed read days (past days without reading) show in red
-            </li>
-          </ul>
-        </div>
+        <CalendarLegend />
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-800">Bible Reading</h3>
-                <p className="text-gray-600">
-                  {selectedDate && selectedDate.toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <X className="w-6 h-6 text-gray-600" />
-              </button>
-            </div>
-
-            {/* Existing Readings List */}
-            {selectedDateReadings.length > 0 && (
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                  {selectedDateReadings.length} Reading{selectedDateReadings.length > 1 ? 's' : ''} on this day
-                </h4>
-                <div className="space-y-2">
-                  {selectedDateReadings.map((reading) => (
-                    <div
-                      key={reading.id}
-                      className={`p-3 rounded-lg border transition-colors ${
-                        currentReadingId === reading.id
-                          ? 'border-indigo-500 bg-indigo-50'
-                          : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-800">{reading.reading}</p>
-                          {reading.completed && (
-                            <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1">
-                              <Check className="w-3 h-3" />
-                              Completed
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => editReading(reading)}
-                          disabled={isSaving || isDeleting}
-                          className="ml-2 px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-100 rounded transition-colors disabled:opacity-50"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">
-                    {isEditMode ? 'Edit Reading' : 'Add Another Reading'}
-                  </p>
-                  {isEditMode && (
-                    <button
-                      onClick={cancelEdit}
-                      disabled={isSaving || isDeleting}
-                      className="mb-2 text-xs text-gray-600 hover:text-gray-800 underline disabled:opacity-50"
-                    >
-                      Cancel Edit
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Conditional Form Display */}
-            {!showNotesForm ? (
-              <>
-                {/* Reading Form */}
-                <div className="space-y-4 mb-4">
-                  <div className="relative">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Bible Book
-                    </label>
-                    <input
-                      type="text"
-                      value={bibleBook}
-                      onChange={(e) => handleBookInputChange(e.target.value)}
-                      onFocus={handleBookInputFocus}
-                      onKeyDown={handleBookKeyDown}
-                      placeholder="e.g., Genesis, Psalm, Matthew"
-                      disabled={isSaving || isDeleting}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      autoComplete="off"
-                    />
-                    {showBookSuggestions && filteredBooks.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {filteredBooks.map((book, index) => (
-                          <div
-                            key={book}
-                            onClick={() => selectBook(book)}
-                            className={`px-3 py-2 cursor-pointer transition-colors text-gray-700 ${
-                              index === selectedSuggestionIndex
-                                ? 'bg-indigo-100'
-                                : 'hover:bg-indigo-50'
-                            }`}
-                          >
-                            {book}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Chapters
-                      </label>
-                      <input
-                        type="text"
-                        value={chapters}
-                        onChange={(e) => setChapters(e.target.value)}
-                        placeholder="e.g., 1-3, 5"
-                        disabled={isSaving || isDeleting}
-                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Verses
-                      </label>
-                      <input
-                        type="text"
-                        value={verses}
-                        onChange={(e) => setVerses(e.target.value)}
-                        placeholder="e.g., 1-10"
-                        disabled={isSaving || isDeleting}
-                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Date Read
-                    </label>
-                    <input
-                      type="date"
-                      value={dateRead}
-                      onChange={(e) => setDateRead(e.target.value)}
-                      disabled={isSaving || isDeleting}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-
-                {/* Add/Edit Notes Button */}
-                <button
-                  onClick={openNotesForm}
-                  disabled={isSaving || isDeleting}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed mb-3"
-                >
-                  <FileText className="w-4 h-4" />
-                  {hasNotes ? 'Edit Notes' : 'Add Notes'}
-                </button>
-
-                {/* Reading Form Buttons */}
-                <div className="flex gap-3">
-                  {isEditMode && (
-                    <button
-                      onClick={deleteReading}
-                      disabled={isSaving || isDeleting}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
-                      {isDeleting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          Deleting...
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </>
-                      )}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowModal(false)}
-                    disabled={isSaving || isDeleting}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  >
-                    {selectedDateReadings.length > 0 ? 'Close' : 'Cancel'}
-                  </button>
-                  <button
-                    onClick={saveReading}
-                    disabled={isSaving || isDeleting}
-                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {isSaving ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        {isEditMode ? 'Updating...' : 'Saving...'}
-                      </span>
-                    ) : (
-                      isEditMode ? 'Update' : 'Save'
-                    )}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Notes Form */}
-                <div className="space-y-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Notes
-                    </label>
-                    <textarea
-                      value={notesContent}
-                      onChange={(e) => setNotesContent(e.target.value)}
-                      placeholder="Write your notes here..."
-                      rows={8}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Notes Form Buttons */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={cancelNotes}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-gray-700"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={saveNotes}
-                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
-                  >
-                    Save Note
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <ReadingModal
+        showModal={showModal}
+        selectedDate={selectedDate}
+        selectedDateReadings={selectedDateReadings}
+        currentReadingId={currentReadingId}
+        isEditMode={isEditMode}
+        isSaving={isSaving}
+        isDeleting={isDeleting}
+        showNotesForm={showNotesForm}
+        hasNotes={hasNotes}
+        bibleBook={bibleBook}
+        chapters={chapters}
+        verses={verses}
+        dateRead={dateRead}
+        notesContent={notesContent}
+        showBookSuggestions={showBookSuggestions}
+        filteredBooks={filteredBooks}
+        selectedSuggestionIndex={selectedSuggestionIndex}
+        onClose={() => setShowModal(false)}
+        onEditReading={editReading}
+        onCancelEdit={cancelEdit}
+        onDeleteReading={deleteReading}
+        onSaveReading={saveReading}
+        onBookInputChange={handleBookInputChange}
+        onBookInputFocus={handleBookInputFocus}
+        onBookKeyDown={handleBookKeyDown}
+        onSelectBook={selectBook}
+        onChaptersChange={setChapters}
+        onVersesChange={setVerses}
+        onDateChange={setDateRead}
+        onOpenNotesForm={openNotesForm}
+        onSaveNotes={saveNotes}
+        onCancelNotes={cancelNotes}
+        onNotesContentChange={setNotesContent}
+      />
     </div>
   );
 }
