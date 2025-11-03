@@ -27,6 +27,10 @@ DATABASE_URL=postgresql://postgres:your_password@your_ip:5432/postgres?sslmode=r
 
 **Note:** You do NOT need the Supabase anon key or service role key when using Prisma with direct PostgreSQL connection. Those are only needed if using Supabase's client SDK features.
 
+## Important Files
+
+This project includes a `nixpacks.toml` file that configures how Coolify/Nixpacks builds the application. This file ensures the app is deployed as a Next.js server (not a static site).
+
 ## Deployment Steps
 
 ### 1. Set up PostgreSQL Database in Coolify
@@ -38,6 +42,7 @@ DATABASE_URL=postgresql://postgres:your_password@your_ip:5432/postgres?sslmode=r
 
 - Add your application from GitHub
 - Set the environment variable `DATABASE_URL` with your PostgreSQL connection string
+- Nixpacks will automatically detect the `nixpacks.toml` configuration
 
 ### 3. Run Database Migrations
 
