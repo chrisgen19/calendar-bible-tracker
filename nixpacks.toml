@@ -1,6 +1,6 @@
 [phases.setup]
-nixPkgs = ['nodejs_18', 'npm-9_x']
-aptPkgs = ['bash']
+nixPkgs = ['nodejs_18', 'npm-9_x', 'bash']
+aptPkgs = ['curl', 'wget']
 
 [phases.install]
 cmds = ['npm ci']
